@@ -2,3 +2,7 @@
 	path = build-logic
 	url = git@github.com:indramahkota/build-logic.git
 	branch = main
+[submodule "version-catalog"]
+	path = version-catalog
+	url = git@github.com:indramahkota/version-catalog.git
+	branch = master
