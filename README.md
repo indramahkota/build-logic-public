@@ -1,88 +1,112 @@
-# Build Logic For Android Exploration
+# Build Logic for Android Project
 
 ## 🔧 How To Use
 
 ```kt
 // Root project settings.gradle.kts
 pluginManagement {
-    repositories {
-        maven {
-            url = uri("https://maven.pkg.github.com/indramahkota/build-logic-public/")
-            credentials {
-                username = "YOUR GITHUB USERNAME"
-                password = "YOUR GITHUB TOKEN"
-            }
-        }
+  repositories {
+    maven(url = "https://maven.pkg.github.com/indramahkota/build-logic-public/") {
+      name = "GitHubPackages"
+      credentials {
+        username = providers.gradleProperty("github.username").orNull
+          ?: System.getenv("GITHUB_USERNAME")
+        password = providers.gradleProperty("github.token").orNull
+          ?: System.getenv("GITHUB_TOKEN")
+      }
+    }
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+
+dependencyResolutionManagement {
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  repositories {
+    maven(url = "https://maven.pkg.github.com/indramahkota/version-catalog-public/") {
+      credentials {
+        username = providers.gradleProperty("github.username").orNull
+          ?: System.getenv("GITHUB_USERNAME")
+        password = providers.gradleProperty("github.token").orNull
+          ?: System.getenv("GITHUB_TOKEN")
+      }
+    }
+    google()
+    mavenCentral()
+  }
+
+  versionCatalogs {
+    create("indra") {
+      from("com.indramahkota.gradle.version:catalog-indramahkota:0.4.0")
+    }
+  }
 }
 ```
 
 ```kt
 // Root project build.gradle.kts
 plugins {
-    id("com.indramahkota.detekt")
-    id("com.indramahkota.android.config")
-    id("com.indramahkota.compose.config")
-    id("com.indramahkota.publish.config")
+  alias(indra.plugins.convention.android.app) apply false
+  alias(indra.plugins.convention.android.lib) apply false
+  alias(indra.plugins.convention.compose.app) apply false
+  alias(indra.plugins.convention.compose.lib) apply false
+  alias(indra.plugins.convention.publishing) apply false
+
+  alias(indra.plugins.convention.android.config)
+  alias(indra.plugins.convention.compose.config)
+  alias(indra.plugins.convention.publish.config)
+  alias(indra.plugins.convention.detekt)
 }
 
 // Initial configuration for subprojects
 indramahkota {
-    // Default JavaVersion.VERSION_1_8
-    jvmTarget.set(JavaVersion.VERSION_11)
-    withCompilerArgs {
-        compilerArgs = setOf(
-            "-Xlint:unchecked", "-Xlint:deprecation"
+  jvmTarget.set(JavaVersion.VERSION_11)
+
+  // Report directory:
+  // rootDir/reports/detekt-reports/
+  detekt {
+    checkOnlyDiffWithBranch("main") {
+      fileExtensions = setOf(".kt", ".kts")
+    }
+  }
+
+  android {
+    minSdk.set(23)
+    targetSdk.set(34)
+    compileSdk.set(34)
+  }
+
+  // Report directory:
+  // rootDir/reports/compose-reports/
+  // rootDir/reports/compose-metrics/
+  compose {
+    compilerVersion.set("1.5.3")
+    enableComposeCompilerMetrics.set(true)
+    enableComposeCompilerReports.set(true)
+  }
+
+  // Set maven pom for all sub projects
+  publishing {
+    pom {
+      setGitHubProject {
+        owner = "indramahkota"
+        repository = "android-exploration"
+      }
+
+      licenses {
+        mit()
+      }
+
+      developers {
+        developer(
+          id = "indramahkota",
+          name = "Indra Mahkota",
+          email = "indramahkota1@gmail.com",
         )
+      }
     }
-
-    // Report directory: $reportsDir/detekt-reports/
-    detekt {
-        // Related with :detektDiff task
-        checkOnlyDiffWithBranch("main") {
-            fileExtensions = setOf(".kt", ".kts")
-        }
-    }
-
-    android {
-        minSdk.set(23)
-        targetSdk.set(33)
-    }
-
-    // Report directory:
-    // - $reportsDir/compose-reports/
-    // - $reportsDir/compose-metrics/
-    compose {
-        // https://developer.android.com/jetpack/androidx/releases/compose
-        // compiler and runtime is mandatory property
-        compilerVersion.set("1.4.3")
-        // Must be same with supported version
-        // Current using bom version 2023.01.00
-        runtimeVersion.set("1.3.3")
-        enableComposeCompilerMetrics.set(true)
-        enableComposeCompilerReports.set(true)
-    }
-
-    // Set maven pom for all sub projects
-    publishing {
-        pom {
-            setGitHubProject {
-                owner = "indramahkota"
-                repository = "android-exploration"
-            }
-
-            licenses {
-                mit()
-            }
-
-            developers {
-                developer(
-                    id = "indramahkota",
-                    name = "Indra Mahkota",
-                    email = "indramahkota1@gmail.com"
-                )
-            }
-        }
-    }
+  }
 }
 
 ```
@@ -90,17 +114,17 @@ indramahkota {
 ```kt
 // In submodules project build.gradle.kts
 plugins {
-    // Automatically apply android plugin
-    id("com.indramahkota.compose.app")
-    id("com.indramahkota.hilt")
+  // Automatically apply android plugin
+  alias(indra.plugins.convention.compose.app)
+  alias(libs.plugins.secret.gradle.plugin)
 }
 
 //or
 
 plugins {
-    // Automatically apply android plugin
-    id("com.indramahkota.compose.lib")
-    id("com.indramahkota.publishing")
+  // Automatically apply android plugin
+  alias(indra.plugins.convention.android.lib)
+  alias(indra.plugins.convention.publishing)
 }
 
 ```
